@@ -1,0 +1,444 @@
+/* ===== 设计令牌 ===== */
+:root {
+	--yellow: #FFFF00;
+	--black: #0a0a0a;
+	--white: #f5f5f0;
+	--gray-100: #e8e8e3;
+	--gray-200: #c4c4bc;
+	--gray-300: #88887a;
+	--gray-400: #55554d;
+	--mono: 'Space Mono', monospace;
+	--display: 'Bebas Neue', sans-serif;
+	--serif: 'Instrument Serif', serif;
+
+	/* AQI 色阶 */
+	--aqi-good: #27ae60;
+	--aqi-mod: #f1c40f;
+	--aqi-usg: #e67e22;
+	--aqi-unhealthy: #e74c3c;
+	--aqi-hazardous: #8e44ad;
+}
+
+/* ===== 基础 ===== */
+.w-container {
+	max-width: 480px;
+	margin: 0 auto;
+	padding: 24px 20px 80px;
+	min-height: 100vh;
+	font-family: var(--mono);
+	font-size: 13px;
+	line-height: 1.6;
+	color: var(--black);
+	background: var(--white);
+	position: relative;
+}
+
+/* 噪点纹理 */
+.w-container::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	opacity: .03;
+	z-index: 9999;
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ===== 顶部 ===== */
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	margin-bottom: 40px;
+}
+.date-block { display: flex; flex-direction: column; }
+.date-num { font-family: var(--display); font-size: 72px; line-height: .85; letter-spacing: -2px; }
+.date-label { font-size: 11px; text-transform: uppercase; letter-spacing: 3px; color: var(--gray-300); margin-top: 2px; }
+
+.location-tag { text-align: right; }
+.location-city { font-family: var(--serif); font-size: 20px; font-style: italic; }
+.location-coords { font-size: 10px; color: var(--gray-300); letter-spacing: 1px; margin-top: 2px; }
+
+/* ===== 天气概览 ===== */
+.hero-section { position: relative; padding: 40px 0 60px; margin-bottom: 16px; }
+
+.bg-dates {
+	position: absolute; top: 0; left: -10px; right: -10px;
+	display: flex; justify-content: space-between;
+	opacity: .04; font-family: var(--display); font-size: 140px; line-height: .85;
+	pointer-events: none; user-select: none; overflow: hidden;
+}
+
+.temp-hero { display: flex; align-items: flex-start; gap: 12px; position: relative; z-index: 1; }
+
+.temp-value {
+	font-family: var(--display); font-size: 180px; line-height: .85; letter-spacing: -6px; position: relative;
+}
+.temp-value sup {
+	font-family: var(--display); font-size: 60px; position: absolute; top: 8px; right: -36px;
+}
+
+.feels-like { font-size: 11px; color: var(--gray-400); letter-spacing: 1px; display: block; margin-top: 12px; }
+.feels-like b { color: var(--black); font-weight: 700; }
+
+.temp-meta { display: flex; flex-direction: column; justify-content: space-between; padding-top: 16px; min-height: 160px; }
+.condition-main { font-family: var(--serif); font-size: 28px; font-style: italic; line-height: 1.2; }
+
+.weather-icon-large {
+	position: absolute; right: -10px; top: 50%; transform: translateY(-50%);
+	width: 120px; height: 120px; opacity: .08;
+}
+
+/* ===== 实时数据 ===== */
+.stats-row {
+	display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+	border-top: 1px solid var(--black); border-left: 1px solid var(--black);
+	margin-bottom: 56px;
+}
+.stat-cell {
+	background: var(--white); padding: 14px 10px;
+	display: flex; flex-direction: column;
+	border-right: 1px solid var(--black); border-bottom: 1px solid var(--black);
+}
+.stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--gray-300); margin-bottom: 6px; }
+.stat-value { font-family: var(--display); font-size: 26px; letter-spacing: -1px; line-height: 1; }
+.stat-unit { font-family: var(--mono); font-size: 9px; color: var(--gray-300); margin-top: 4px; }
+
+/* ===== 章节标题 ===== */
+.section-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; position: relative; }
+.section-title {
+	font-family: var(--display); font-size: 32px; letter-spacing: 1px; position: relative;
+}
+.section-title::before {
+	content: ''; position: absolute; left: -16px; top: 50%; transform: translateY(-50%);
+	width: 6px; height: 6px; background: var(--black);
+}
+.section-tags { display: flex; gap: 12px; font-size: 10px; color: var(--gray-300); letter-spacing: 1px; }
+.section-tags span { cursor: pointer; transition: color .2s; }
+.section-tags span:hover { color: var(--black); }
+
+/* ===== 图表容器 ===== */
+.chart-container {
+	width: 100%; height: 180px; margin-bottom: 16px;
+}
+.chart-container-tall {
+	height: 220px;
+}
+
+/* ===== 天气预报 ===== */
+.hourly-section { margin-bottom: 56px; }
+
+.hourly-scroll {
+	display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; padding-bottom: 8px;
+}
+.hourly-scroll::-webkit-scrollbar { display: none; }
+
+.hour-card {
+	flex-shrink: 0; width: 68px; padding: 14px 10px;
+	border-right: 1px solid var(--gray-200);
+	display: flex; flex-direction: column; align-items: center; gap: 6px;
+	transition: background .2s, transform .15s; cursor: default;
+}
+.hour-card:hover { transform: scale(1.04); }
+.hour-card:first-child { border-left: 1px solid var(--gray-200); }
+.hour-card.now { background: var(--yellow); }
+
+.hour-time { font-size: 10px; letter-spacing: 1px; color: var(--gray-400); }
+.hour-card.now .hour-time { color: var(--black); font-weight: 700; }
+.hour-icon { font-size: 20px; line-height: 1; opacity: .7; }
+.hour-card.now .hour-icon { opacity: 1; }
+.hour-temp { font-family: var(--display); font-size: 22px; letter-spacing: -1px; color: var(--gray-400); }
+.hour-card.now .hour-temp { color: var(--black); }
+
+/* ===== 每日预报 ===== */
+.daily-section { margin-bottom: 56px; }
+.daily-list { display: flex; flex-direction: column; margin-bottom: 20px; }
+
+.day-row {
+	display: grid; grid-template-columns: 85px 1fr 44px 52px 36px;
+	align-items: center; padding: 13px 0;
+	border-bottom: 1px solid var(--gray-200); gap: 6px;
+	transition: padding-left .2s; cursor: default;
+}
+.day-row:hover { padding-left: 8px; }
+.day-row:first-child { border-top: 1px solid var(--gray-200); }
+
+.day-name { font-family: var(--display); font-size: 20px; letter-spacing: .5px; }
+.day-date { font-size: 10px; color: var(--gray-300); letter-spacing: 1px; }
+.day-condition { font-family: var(--serif); font-size: 14px; font-style: italic; color: var(--gray-400); }
+.day-icon { font-size: 18px; text-align: center; opacity: .6; }
+
+.day-range { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.day-low { font-family: var(--display); font-size: 17px; letter-spacing: -1px; color: var(--gray-300); }
+.day-bar { flex: 1; max-width: 54px; height: 3px; background: var(--gray-200); position: relative; margin: 0 3px; }
+.day-bar-fill { position: absolute; top: 0; height: 100%; background: var(--black); transition: width .6s ease; }
+.day-high { font-family: var(--display); font-size: 20px; letter-spacing: -1px; }
+
+.day-aqi {
+	font-family: var(--display); font-size: 16px; letter-spacing: -0.5px;
+	text-align: right; opacity: .7;
+}
+
+.day-row.highlight { position: relative; }
+.day-row.highlight::before {
+	content: ''; position: absolute; left: -20px; top: 0; bottom: 0;
+	width: 4px; background: var(--yellow);
+}
+
+/* ===== 空气质量 ===== */
+.aqi-hero-section { margin-bottom: 56px; }
+
+.aqi-hero-grid {
+	display: grid; grid-template-columns: 150px 1fr; gap: 12px;
+	align-items: start;
+	margin-bottom: 8px;
+}
+
+.aqi-gauge-card {
+	background: var(--white);
+	border: 1px solid var(--black);
+	padding: 16px 12px 12px;
+	text-align: center;
+}
+.gauge-svg { width: 100%; height: auto; }
+.gauge-val {
+	font-family: var(--display); font-size: 32px; fill: #0a0a0a;
+}
+.gauge-lbl {
+	font-family: var(--mono); font-size: 9px; fill: var(--gray-300);
+	letter-spacing: 2px; text-transform: uppercase;
+}
+.gauge-footer { margin-top: 6px; }
+.gauge-scale {
+	font-size: 7px; color: var(--gray-300); letter-spacing: 1px;
+	display: block;
+}
+
+.pollutant-card {
+	background: var(--black); color: var(--white);
+	padding: 20px 18px;
+	position: relative; overflow: hidden;
+}
+.pollutant-card::after {
+	content: ''; position: absolute; right: -20px; bottom: -30px;
+	width: 100px; height: 100px; border-radius: 50%;
+	background: var(--yellow); opacity: .08;
+}
+.pollutant-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; position: relative; z-index: 1; }
+.pollutant-title { font-family: var(--display); font-size: 18px; letter-spacing: 1px; }
+.pollutant-sub { font-size: 9px; color: rgba(255,255,255,.35); letter-spacing: 1px; }
+
+.pollutant-list { display: flex; flex-direction: column; gap: 10px; position: relative; z-index: 1; }
+.pollutant-row { display: flex; align-items: center; gap: 8px; }
+.p-name {
+	font-family: var(--display); font-size: 15px; width: 42px;
+	flex-shrink: 0; letter-spacing: .5px;
+}
+.p-bar-track {
+	flex: 1; height: 6px; background: rgba(255,255,255,.1); border-radius: 3px; overflow: hidden;
+}
+.p-bar-fill {
+	height: 100%; background: var(--yellow); border-radius: 3px;
+}
+.p-val {
+	font-size: 10px; color: rgba(255,255,255,.6); width: 52px;
+	text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums;
+}
+.p-val small { font-size: 8px; color: rgba(255,255,255,.35); margin-left: 1px; }
+
+/* ===== 温湿度 ===== */
+.humi-section { margin-bottom: 56px; }
+
+/* ===== 日出日落 ===== */
+.sun-section { margin-bottom: 56px; }
+
+.sun-card {
+	background: var(--black); color: var(--white);
+	padding: 28px 24px; position: relative; overflow: hidden;
+}
+.sun-card::after {
+	content: ''; position: absolute; right: -30px; bottom: -40px;
+	width: 140px; height: 140px; border-radius: 50%;
+	background: var(--yellow); opacity: .9;
+}
+.sun-header {
+	display: flex; justify-content: space-between; align-items: baseline;
+	margin-bottom: 24px; position: relative; z-index: 1;
+}
+.sun-label { font-family: var(--display); font-size: 28px; letter-spacing: 1px; }
+.sun-duration { font-size: 11px; color: rgba(255,255,255,.5); letter-spacing: 2px; }
+
+.sun-times { display: flex; justify-content: space-between; position: relative; z-index: 1; }
+.sun-time-block { display: flex; flex-direction: column; }
+.sun-time-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,.4); margin-bottom: 4px; }
+.sun-time-val { font-family: var(--display); font-size: 36px; letter-spacing: -1px; }
+
+.sun-track {
+	position: absolute; top: 50%; left: 80px; right: 80px;
+	height: 2px; background: rgba(255,255,255,.15); transform: translateY(-50%);
+}
+.sun-track-progress { position: absolute; left: 0; top: 0; height: 100%; background: var(--yellow); }
+.sun-dot {
+	position: absolute; top: 50%; transform: translate(-50%, -50%);
+	width: 10px; height: 10px; background: var(--yellow); border-radius: 50%;
+}
+
+/* ===== 详细数据 ===== */
+.details-section { margin-bottom: 56px; }
+
+.details-grid {
+	display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--black);
+}
+.detail-card { background: var(--white); padding: 20px 16px; position: relative; }
+.detail-card.wide { grid-column: span 2; }
+
+.detail-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--gray-300); margin-bottom: 10px; }
+.detail-value { font-family: var(--display); font-size: 38px; letter-spacing: -1px; line-height: 1; }
+.detail-aqi-unit { font-size: 16px; color: var(--gray-300); }
+.detail-sub { font-size: 10px; color: var(--gray-300); margin-top: 6px; line-height: 1.5; }
+
+.detail-accent {
+	position: absolute; top: 16px; right: 16px;
+	font-family: var(--display); font-size: 48px;
+	color: var(--yellow); opacity: .25; line-height: 1;
+}
+
+/* ===== 页脚 ===== */
+.footer {
+	border-top: 1px solid var(--gray-200); padding-top: 24px;
+	display: flex; justify-content: space-between; align-items: center;
+}
+.footer-left { display: flex; align-items: center; gap: 12px; }
+.update-badge {
+	background: var(--yellow); padding: 4px 10px; font-size: 10px;
+	font-weight: 700; letter-spacing: 1px;
+}
+.footer-info { font-size: 10px; color: var(--gray-300); letter-spacing: .5px; }
+
+.footer-right { font-size: 10px; color: var(--gray-300); letter-spacing: 1px; text-align: right; }
+.page-num { font-family: var(--display); font-size: 28px; color: var(--black); line-height: 1; display: block; }
+
+/* ===== Mock 场景切换器 ===== */
+.mock-trigger {
+	position: fixed;
+	top: 12px;
+	right: 12px;
+	z-index: 10001;
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--black);
+	color: rgba(255,255,255,.3);
+	border: 1px solid rgba(255,255,255,.15);
+	cursor: pointer;
+	font-size: 14px;
+	transition: all .15s;
+	line-height: 1;
+}
+.mock-trigger:hover {
+	color: var(--yellow);
+	border-color: var(--yellow);
+}
+.mock-switcher {
+	position: fixed;
+	top: 12px;
+	right: 12px;
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	background: var(--black);
+	padding: 4px 6px;
+}
+.mock-label {
+	font-family: var(--display);
+	font-size: 11px;
+	color: var(--yellow);
+	letter-spacing: 1px;
+	padding: 0 6px 0 2px;
+}
+.mock-btn {
+	font-family: var(--mono);
+	font-size: 10px;
+	padding: 3px 8px;
+	background: transparent;
+	color: rgba(255,255,255,.4);
+	border: 1px solid rgba(255,255,255,.15);
+	cursor: pointer;
+	transition: all .15s;
+	letter-spacing: .5px;
+}
+.mock-btn:hover {
+	color: var(--white);
+	border-color: rgba(255,255,255,.4);
+}
+.mock-btn.active {
+	background: var(--yellow);
+	color: var(--black);
+	border-color: var(--yellow);
+	font-weight: 700;
+}
+
+/* ===== 加载 / 错误状态 ===== */
+.loading-state,
+.error-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	font-family: var(--mono);
+	font-size: 13px;
+	color: var(--gray-300);
+}
+.error-state p:first-child {
+	font-family: var(--display);
+	font-size: 28px;
+	color: var(--black);
+	margin-bottom: 8px;
+}
+.error-detail {
+	font-size: 11px;
+	color: var(--gray-400);
+}
+.retry-btn {
+	margin-top: 16px;
+	font-family: var(--mono);
+	font-size: 11px;
+	padding: 6px 20px;
+	background: var(--black);
+	color: var(--white);
+	border: none;
+	cursor: pointer;
+	letter-spacing: 1px;
+	transition: background .15s;
+}
+.retry-btn:hover {
+	background: var(--yellow);
+	color: var(--black);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 420px) {
+	.temp-value { font-size: 140px; letter-spacing: -4px; }
+	.temp-value sup { font-size: 46px; right: -28px; top: 6px; }
+	.bg-dates { font-size: 100px; }
+	.date-num { font-size: 56px; }
+	.stat-value { font-size: 22px; }
+	.sun-time-val { font-size: 28px; }
+	.detail-value { font-size: 30px; }
+	.day-row { grid-template-columns: 65px 1fr 38px 48px 32px; }
+	.aqi-hero-grid { grid-template-columns: 130px 1fr; gap: 8px; }
+	.gauge-val { font-size: 26px; }
+	.pollutant-title { font-size: 15px; }
+	.p-name { font-size: 13px; width: 36px; }
+	.chart-container { height: 150px; }
+	.chart-container-tall { height: 180px; }
+}
+
+@media (max-width: 360px) {
+	.aqi-hero-grid { grid-template-columns: 1fr; }
+	.aqi-gauge-card { max-width: 160px; margin: 0 auto; }
+}
