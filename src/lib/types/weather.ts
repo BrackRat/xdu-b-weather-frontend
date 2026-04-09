@@ -50,6 +50,7 @@ export interface CurrentWeather {
   temp: number;
   feelsLike: number;
   condition: string[];
+  icon: string;
   wind: number;
   windDir: WindDirection;
   humidity: number;
@@ -336,6 +337,7 @@ export function mapCaiyunToWeatherData(
     temp: Math.round(rt.temperature),
     feelsLike: Math.round(rt.apparent_temperature),
     condition: [condition],
+    icon,
     wind: Math.round(rt.wind.speed * 3.6), // m/s → km/h
     windDir: windDegToDirection(rt.wind.direction),
     humidity: Math.round(rt.humidity * 100),
@@ -455,7 +457,7 @@ function formatCoord(val: number, pos: string, neg: string): string {
 // ============================================================
 
 export interface BackendWeatherResponse {
-  ip: string;
+  ip?: string;
   location: {
     city: string;
     district: string;
@@ -509,6 +511,16 @@ export interface BackendWeatherResponse {
       comfort: { date: string; index: string; desc: string }[];
       coldRisk: { date: string; index: string; desc: string }[];
     };
+    astro?: {
+      date: string;
+      sunrise: { time: string };
+      sunset: { time: string };
+    }[];
+    temperature?: { date: string; max: number; min: number; avg: number }[];
+    skycon?: { date: string; value: CaiyunSkycon }[];
+    air_quality?: {
+      aqi: { date: string; max: { chn: number; usa: number }; avg: { chn: number; usa: number }; min: { chn: number; usa: number } }[];
+    };
   };
   record_id: number;
 }
@@ -529,6 +541,7 @@ export function mapBackendToWeatherData(raw: BackendWeatherResponse): WeatherDat
     temp: Math.round(rt.temperature),
     feelsLike: Math.round(rt.apparent_temperature),
     condition: [condition],
+    icon,
     wind: Math.round(rt.wind_speed * 3.6),
     windDir: windDegToDirection(rt.wind_direction),
     humidity: Math.round(rt.humidity * 100),
@@ -547,12 +560,25 @@ export function mapBackendToWeatherData(raw: BackendWeatherResponse): WeatherDat
     co: aq.co,
   };
 
-  // 日出日落 — 后端未提供，用默认值
+  // 日出日落 — 优先使用后端 astro 数据
+  const todayAstro = raw.daily_forecast.astro?.[0];
+  const sunrise = todayAstro?.sunrise.time ?? '06:00';
+  const sunset = todayAstro?.sunset.time ?? '18:30';
+  const [sh, sm] = sunrise.split(':').map(Number);
+  const [eh, em] = sunset.split(':').map(Number);
+  const sunriseMin = sh * 60 + sm;
+  const sunsetMin = eh * 60 + em;
+  const dayLen = sunsetMin - sunriseMin;
+  const hours = Math.floor(dayLen / 60);
+  const mins = dayLen % 60;
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const progress = Math.max(0, Math.min(100, ((nowMin - sunriseMin) / dayLen) * 100));
+
   const sun: SunData = {
-    sunrise: '06:00',
-    sunset: '18:30',
-    duration: '12小时30分',
-    progress: 50,
+    sunrise,
+    sunset,
+    duration: `${hours}小时${mins}分`,
+    progress: Math.round(progress),
   };
 
   // 逐时预报
@@ -570,8 +596,10 @@ export function mapBackendToWeatherData(raw: BackendWeatherResponse): WeatherDat
     };
   });
 
-  // 每日预报 — 后端未提供每日温度/天气，基于逐时数据生成
-  const dailyForecast = generateDailyFromHourly(hourly, rt.weather_condition);
+  // 每日预报 — 优先使用后端每日数据，否则基于逐时数据生成
+  const dailyForecast = raw.daily_forecast.temperature?.length
+    ? mapDailyFromBackend(raw)
+    : generateDailyFromHourly(hourly, rt.weather_condition);
 
   // 污染物
   const aqiPollutants: PollutantData[] = [
@@ -608,6 +636,31 @@ export function mapBackendToWeatherData(raw: BackendWeatherResponse): WeatherDat
     hourlyAqi,
     hourlyHumidity,
   };
+}
+
+/** 从后端每日数据生成预报 */
+function mapDailyFromBackend(raw: BackendWeatherResponse): DailyForecast[] {
+  const df = raw.daily_forecast;
+  const temps = df.temperature!;
+  const skycons = df.skycon ?? [];
+  const aqiData = df.air_quality?.aqi ?? [];
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+  return temps.slice(0, 7).map((t, i) => {
+    const d = new Date(t.date);
+    const sc = skycons[i];
+    const { condition, icon } = skyconToCondition(sc?.value ?? 'CLEAR_DAY');
+    return {
+      day: i === 0 ? '今天' : weekdays[d.getDay()],
+      date: `${weekdays[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}`,
+      condition,
+      icon,
+      high: Math.round(t.max),
+      low: Math.round(t.min),
+      aqi: aqiData[i]?.max.chn ?? 0,
+      highlight: i === 0,
+    };
+  });
 }
 
 /** 从逐时数据生成每日预报 */

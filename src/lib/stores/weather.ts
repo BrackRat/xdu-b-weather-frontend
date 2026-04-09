@@ -1,5 +1,6 @@
 import { writable, derived, type Readable } from 'svelte/store';
-import { fetchWeatherData, WeatherApiError } from '$lib/api/weather';
+import { fetchWeatherData, fetchWeatherByLocation, WeatherApiError } from '$lib/api/weather';
+import { requestGeolocation } from '$lib/geolocation';
 import type { WeatherData } from '$lib/types/weather';
 import { mockDataMap } from '$lib/mock/weather';
 
@@ -12,11 +13,43 @@ export type MockScenario = 'normal' | 'heavy-pollution' | 'cold' | 'rain' | 'err
 /** 数据模式：real=后端真实API, mock=模拟数据 */
 export type DataMode = 'real' | 'mock';
 
+/** 定位来源 */
+export type LocationSource = 'gps' | 'ip' | null;
+
+// ===== localStorage 工具 =====
+function loadFromStorage<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveToStorage(key: string, value: unknown) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch { /* ignore */ }
+}
+
 /** 当前数据模式 */
-export const dataMode = writable<DataMode>('real');
+export const dataMode = writable<DataMode>(loadFromStorage('weather_dataMode', 'real'));
+dataMode.subscribe((v) => saveToStorage('weather_dataMode', v));
 
 /** 当前选中的 mock 场景 */
-export const mockScenario = writable<MockScenario>('normal');
+export const mockScenario = writable<MockScenario>(loadFromStorage('weather_mockScenario', 'normal'));
+mockScenario.subscribe((v) => saveToStorage('weather_mockScenario', v));
+
+/** 定位来源 */
+export const locationSource = writable<LocationSource>(null);
+
+/** 自定义经纬度（mock 模式下使用，null 表示未设置） */
+export const mockLat = writable<number | null>(loadFromStorage('weather_mockLat', null));
+export const mockLon = writable<number | null>(loadFromStorage('weather_mockLon', null));
+mockLat.subscribe((v) => saveToStorage('weather_mockLat', v));
+mockLon.subscribe((v) => saveToStorage('weather_mockLon', v));
 
 /** 天气数据 */
 const dataStore = writable<WeatherData | null>(null);
@@ -30,107 +63,212 @@ let activeRequestId = 0;
 let realWeatherController: AbortController | null = null;
 
 function beginLoad() {
-	activeRequestId += 1;
-	stateStore.set('loading');
-	errorStore.set(null);
-	return activeRequestId;
+  activeRequestId += 1;
+  stateStore.set('loading');
+  errorStore.set(null);
+  return activeRequestId;
 }
 
 function isCurrentRequest(requestId: number, mode: DataMode) {
-	return requestId === activeRequestId && getStoreValue(dataMode) === mode;
+  return requestId === activeRequestId && getStoreValue(dataMode) === mode;
 }
 
-/** 加载天气数据 — 真实模式（前端直连后端，保留客户端 IP） */
+/** 加载天气数据 — 真实模式（自动尝试 GPS 定位，失败则回退 IP 定位） */
 export async function loadRealWeather() {
-	const requestId = beginLoad();
-	realWeatherController?.abort();
-	realWeatherController = new AbortController();
+  const requestId = beginLoad();
+  realWeatherController?.abort();
+  realWeatherController = new AbortController();
+  const signal = realWeatherController.signal;
 
-	try {
-		const data = await fetchWeatherData(realWeatherController.signal);
-		if (!isCurrentRequest(requestId, 'real')) return;
-		dataStore.set(data);
-		stateStore.set('success');
-	} catch (e) {
-		if (e instanceof DOMException && e.name === 'AbortError') {
-			return;
-		}
+  try {
+    // 第一步：尝试浏览器 GPS 定位
+    let usedGps = false;
+    try {
+      const pos = await requestGeolocation();
+      if (!isCurrentRequest(requestId, 'real')) return;
 
-		if (!isCurrentRequest(requestId, 'real')) return;
+      // GPS 定位成功，调用 by-location API
+      const data = await fetchWeatherByLocation(pos.lat, pos.lon, signal);
+      if (!isCurrentRequest(requestId, 'real')) return;
 
-		let msg: string;
-		if (e instanceof WeatherApiError) {
-			msg = `API 错误 (${e.statusCode}): ${e.message}`;
-		} else if (e instanceof Error) {
-			msg = e.message;
-		} else {
-			msg = '未知错误';
-		}
-		errorStore.set(msg);
-		stateStore.set('error');
-	} finally {
-		if (requestId === activeRequestId) {
-			realWeatherController = null;
-		}
-	}
+      dataStore.set(data);
+      locationSource.set('gps');
+      stateStore.set('success');
+      usedGps = true;
+    } catch {
+      // GPS 失败（权限拒绝、超时、非 HTTPS 等）— 静默回退到 IP 定位
+    }
+
+    // 第二步：GPS 失败，回退到 IP 定位
+    if (!usedGps) {
+      if (!isCurrentRequest(requestId, 'real')) return;
+
+      const data = await fetchWeatherData(signal);
+      if (!isCurrentRequest(requestId, 'real')) return;
+
+      dataStore.set(data);
+      locationSource.set('ip');
+      stateStore.set('success');
+    }
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      return;
+    }
+
+    if (!isCurrentRequest(requestId, 'real')) return;
+
+    let msg: string;
+    if (e instanceof WeatherApiError) {
+      msg = `API 错误 (${e.statusCode}): ${e.message}`;
+    } else if (e instanceof Error) {
+      msg = e.message;
+    } else {
+      msg = '未知错误';
+    }
+    errorStore.set(msg);
+    stateStore.set('error');
+  } finally {
+    if (requestId === activeRequestId) {
+      realWeatherController = null;
+    }
+  }
 }
 
-/** 加载天气数据 — mock 模式（本地数据，不走网络） */
+/** 手动使用 GPS 定位刷新天气 */
+export async function refreshWithGps() {
+  const requestId = beginLoad();
+  realWeatherController?.abort();
+  realWeatherController = new AbortController();
+  const signal = realWeatherController.signal;
+
+  try {
+    const pos = await requestGeolocation();
+    if (!isCurrentRequest(requestId, 'real')) return;
+
+    const data = await fetchWeatherByLocation(pos.lat, pos.lon, signal);
+    if (!isCurrentRequest(requestId, 'real')) return;
+
+    dataStore.set(data);
+    locationSource.set('gps');
+    stateStore.set('success');
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return;
+    if (!isCurrentRequest(requestId, 'real')) return;
+
+    // GPS 失败，回退 IP
+    try {
+      const data = await fetchWeatherData(signal);
+      if (!isCurrentRequest(requestId, 'real')) return;
+      dataStore.set(data);
+      locationSource.set('ip');
+      stateStore.set('success');
+    } catch {
+      if (!isCurrentRequest(requestId, 'real')) return;
+      errorStore.set('GPS 定位失败，IP 定位也失败');
+      stateStore.set('error');
+    }
+  } finally {
+    if (requestId === activeRequestId) {
+      realWeatherController = null;
+    }
+  }
+}
+
+/** 加载天气数据 — mock 模式 */
 export async function loadMockWeather(scenario?: MockScenario) {
-	realWeatherController?.abort();
-	realWeatherController = null;
+  realWeatherController?.abort();
+  realWeatherController = null;
 
-	const requestId = beginLoad();
-	const activeScenario = scenario ?? getStoreValue(mockScenario);
+  const requestId = beginLoad();
+  const activeScenario = scenario ?? getStoreValue(mockScenario);
+  const lat = getStoreValue(mockLat);
+  const lon = getStoreValue(mockLon);
 
-	if (activeScenario === 'error') {
-		if (!isCurrentRequest(requestId, 'mock')) return;
-		errorStore.set('模拟服务端错误: 外部天气 API 超时');
-		stateStore.set('error');
-		return;
-	}
+  // 如果设置了自定义经纬度，用真实 API 获取该位置的天气
+  if (lat !== null && lon !== null) {
+    realWeatherController = new AbortController();
+    const signal = realWeatherController.signal;
 
-	const data = mockDataMap[activeScenario];
-	if (!data) {
-		if (!isCurrentRequest(requestId, 'mock')) return;
-		errorStore.set(`未知 mock 场景: ${activeScenario}`);
-		stateStore.set('error');
-		return;
-	}
+    try {
+      if (!isCurrentRequest(requestId, 'mock')) return;
+      const data = await fetchWeatherByLocation(lat, lon, signal);
+      if (!isCurrentRequest(requestId, 'mock')) return;
+      dataStore.set(data);
+      locationSource.set('gps');
+      stateStore.set('success');
+      return;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      if (!isCurrentRequest(requestId, 'mock')) return;
+      // 自定义坐标 API 失败，回退到本地 mock 数据
+    }
+  }
 
-	if (!isCurrentRequest(requestId, 'mock')) return;
-	dataStore.set(data);
-	stateStore.set('success');
+  // 本地 mock 数据
+  if (activeScenario === 'error') {
+    if (!isCurrentRequest(requestId, 'mock')) return;
+    errorStore.set('模拟服务端错误: 外部天气 API 超时');
+    stateStore.set('error');
+    return;
+  }
+
+  const data = mockDataMap[activeScenario];
+  if (!data) {
+    if (!isCurrentRequest(requestId, 'mock')) return;
+    errorStore.set(`未知 mock 场景: ${activeScenario}`);
+    stateStore.set('error');
+    return;
+  }
+
+  if (!isCurrentRequest(requestId, 'mock')) return;
+  dataStore.set(data);
+  locationSource.set(null);
+  stateStore.set('success');
 }
 
 /** 加载天气数据（根据当前模式自动选择） */
 export async function loadWeatherData() {
-	const mode = getStoreValue(dataMode);
-	if (mode === 'real') {
-		return loadRealWeather();
-	} else {
-		return loadMockWeather();
-	}
+  const mode = getStoreValue(dataMode);
+  if (mode === 'real') {
+    return loadRealWeather();
+  } else {
+    return loadMockWeather();
+  }
 }
 
 /** 切换 mock 场景并重新加载 */
 export function switchScenario(scenario: MockScenario) {
-	mockScenario.set(scenario);
-	dataMode.set('mock');
-	void loadMockWeather(scenario);
+  mockScenario.set(scenario);
+  dataMode.set('mock');
+  void loadMockWeather(scenario);
 }
 
 /** 切换到真实模式并重新加载 */
 export function switchToReal() {
-	dataMode.set('real');
-	void loadRealWeather();
+  dataMode.set('real');
+  void loadRealWeather();
+}
+
+/** 设置 mock 自定义经纬度并重新加载 */
+export function setMockCoords(lat: number, lon: number) {
+  mockLat.set(lat);
+  mockLon.set(lon);
+  dataMode.set('mock');
+  void loadMockWeather();
+}
+
+/** 清除 mock 自定义经纬度 */
+export function clearMockCoords() {
+  mockLat.set(null);
+  mockLon.set(null);
+  void loadMockWeather();
 }
 
 /** 便捷读取 store 值 */
 function getStoreValue<T>(store: Readable<T>): T {
-	let val!: T;
-	store.subscribe((v) => (val = v))();
-	return val;
+  let val!: T;
+  store.subscribe((v) => (val = v))();
+  return val;
 }
 
 /** 派生状态 */

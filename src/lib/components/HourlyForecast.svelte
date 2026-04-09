@@ -7,32 +7,34 @@
 
   let tempChartEl: HTMLCanvasElement;
 
+  const safeHourly = $derived(hourly.length > 0 ? hourly : []);
+
   onMount(() => {
-    const monoFont = { family: "'Space Mono', monospace", size: 10 };
-    const gridColor = 'rgba(0,0,0,0.06)';
-    const tooltipBg = '#0a0a0a';
+    const monoFont = { family: "'SF Mono', 'Space Mono', ui-monospace, monospace", size: 11 };
+    const gridColor = 'rgba(0, 0, 0, 0.04)';
+    const tooltipBg = '#1d1d1f';
 
     const ctx = tempChartEl.getContext('2d')!;
     const tempGrad = ctx.createLinearGradient(0, 0, 0, 200);
-    tempGrad.addColorStop(0, 'rgba(255,255,0,0.25)');
-    tempGrad.addColorStop(1, 'rgba(255,255,0,0)');
+    tempGrad.addColorStop(0, 'rgba(0, 113, 227, 0.12)');
+    tempGrad.addColorStop(1, 'rgba(0, 113, 227, 0)');
 
     new Chart(ctx, {
       type: 'line',
       data: {
-        labels: hourly.map(h => h.time),
+        labels: safeHourly.map(h => h.time),
         datasets: [{
           label: '温度 (°C)',
-          data: hourly.map(h => h.temp),
-          borderColor: '#0a0a0a',
+          data: safeHourly.map(h => h.temp),
+          borderColor: '#0071e3',
           backgroundColor: tempGrad,
           fill: true,
           tension: 0.4,
           borderWidth: 2,
           pointRadius: 0,
           pointHoverRadius: 5,
-          pointHoverBackgroundColor: '#FFFF00',
-          pointHoverBorderColor: '#0a0a0a',
+          pointHoverBackgroundColor: '#0071e3',
+          pointHoverBorderColor: '#ffffff',
           pointHoverBorderWidth: 2
         }]
       },
@@ -47,30 +49,30 @@
             titleFont: monoFont,
             bodyFont: monoFont,
             padding: 10,
-            cornerRadius: 0,
+            cornerRadius: 8,
             displayColors: false,
             callbacks: { label: (ctx) => `${ctx.parsed.y}°C` }
           }
         },
         scales: {
-          x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 9 } } },
-          y: { grid: { color: gridColor }, ticks: { font: { size: 9 } } }
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: 'rgba(0,0,0,0.35)' } },
+          y: { grid: { color: gridColor }, ticks: { font: { size: 10 }, color: 'rgba(0,0,0,0.35)' } }
         }
       }
     });
   });
 </script>
 
-<section class="hourly-section">
+<section>
   <div class="section-header">
     <h2 class="section-title">天气预报</h2>
-    <div class="section-tags"><span>24小时</span><span>逐时</span></div>
+    <span class="section-subtitle">24小时</span>
   </div>
   <div class="chart-container">
     <canvas bind:this={tempChartEl}></canvas>
   </div>
   <div class="hourly-scroll">
-    {#each hourly as h}
+    {#each safeHourly as h}
       <div class="hour-card" class:now={h.isNow}>
         <span class="hour-time">{h.time}</span>
         <span class="hour-icon">{h.icon}</span>

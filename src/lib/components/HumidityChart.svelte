@@ -14,34 +14,37 @@
   let humiChartEl: HTMLCanvasElement;
   let humiChart: Chart<'line', number[], string> | null = null;
 
-  const monoFont = { family: "'Space Mono', monospace", size: 10 };
-  const gridColor = 'rgba(0,0,0,0.06)';
-  const tooltipBg = '#0a0a0a';
+  const safeHourly = $derived(hourly.length > 0 ? hourly : []);
+  const safeHumidity = $derived(hourlyHumidity.length > 0 ? hourlyHumidity : []);
+
+  const monoFont = { family: "'SF Mono', 'Space Mono', ui-monospace, monospace", size: 11 };
+  const gridColor = 'rgba(0, 0, 0, 0.04)';
+  const tooltipBg = '#1d1d1f';
 
   function getChartData(ctx: CanvasRenderingContext2D): ChartData<'line', number[], string> {
     const humiGrad = ctx.createLinearGradient(0, 0, 0, 200);
-    humiGrad.addColorStop(0, 'rgba(52,152,219,0.15)');
-    humiGrad.addColorStop(1, 'rgba(52,152,219,0)');
+    humiGrad.addColorStop(0, 'rgba(0, 113, 227, 0.08)');
+    humiGrad.addColorStop(1, 'rgba(0, 113, 227, 0)');
 
     return {
-      labels: hourly.map((h) => h.time),
+      labels: safeHourly.map((h) => h.time),
       datasets: [
         {
           label: '温度 (°C)',
-          data: hourly.map((h) => h.temp),
-          borderColor: '#e6a017',
+          data: safeHourly.map((h) => h.temp),
+          borderColor: '#ff9f0a',
           backgroundColor: 'transparent',
           yAxisID: 'y',
           tension: 0.4,
           borderWidth: 2,
           pointRadius: 0,
           pointHoverRadius: 4,
-          pointHoverBackgroundColor: '#e6a017'
+          pointHoverBackgroundColor: '#ff9f0a'
         },
         {
           label: '湿度 (%)',
-          data: hourlyHumidity,
-          borderColor: '#3498db',
+          data: safeHumidity,
+          borderColor: 'rgba(0, 113, 227, 0.35)',
           backgroundColor: humiGrad,
           fill: true,
           yAxisID: 'y1',
@@ -49,7 +52,7 @@
           borderWidth: 1.5,
           pointRadius: 0,
           pointHoverRadius: 4,
-          pointHoverBackgroundColor: '#3498db',
+          pointHoverBackgroundColor: 'rgba(0, 113, 227, 0.5)',
           borderDash: [4, 3]
         }
       ]
@@ -65,31 +68,31 @@
         display: true,
         position: 'top',
         align: 'end',
-        labels: { boxWidth: 12, boxHeight: 2, font: { size: 9 }, padding: 8, usePointStyle: false }
+        labels: { boxWidth: 12, boxHeight: 2, font: { size: 10 }, padding: 12, usePointStyle: false, color: 'rgba(0,0,0,0.45)' }
       },
       tooltip: {
         backgroundColor: tooltipBg,
         titleFont: monoFont,
         bodyFont: monoFont,
         padding: 10,
-        cornerRadius: 0
+        cornerRadius: 8
       }
     },
     scales: {
-      x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 9 } } },
+      x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: 'rgba(0,0,0,0.35)' } },
       y: {
         type: 'linear',
         position: 'left',
         grid: { color: gridColor },
-        ticks: { font: { size: 9 }, callback: (v) => `${v}°` },
-        title: { display: true, text: '温度', font: { size: 9 }, color: '#e6a017' }
+        ticks: { font: { size: 10 }, color: 'rgba(0,0,0,0.35)', callback: (v) => `${v}°` },
+        title: { display: true, text: '温度', font: { size: 10 }, color: '#ff9f0a' }
       },
       y1: {
         type: 'linear',
         position: 'right',
         grid: { drawOnChartArea: false },
-        ticks: { font: { size: 9 }, callback: (v) => `${v}%` },
-        title: { display: true, text: '湿度', font: { size: 9 }, color: '#3498db' },
+        ticks: { font: { size: 10 }, color: 'rgba(0,0,0,0.35)', callback: (v) => `${v}%` },
+        title: { display: true, text: '湿度', font: { size: 10 }, color: 'rgba(0,113,227,0.5)' },
         suggestedMin: 30,
         suggestedMax: 80
       }
@@ -119,10 +122,10 @@
   });
 </script>
 
-<section class="humi-section">
+<section>
   <div class="section-header">
-    <h2 class="section-title">温湿度</h2>
-    <div class="section-tags"><span>24小时</span><span>对比</span></div>
+    <h2 class="section-title">天气</h2>
+    <span class="section-subtitle">未来24小时</span>
   </div>
   <div class="chart-container chart-container-tall">
     <canvas bind:this={humiChartEl}></canvas>

@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm add:*)",
+      "Bash(npx svelte-check:*)",
+      "Bash(node:*)",
+      "Bash(npx vite:*)",
+      "Bash(pnpm run:*)",
+      "Bash(curl -s http://localhost:5173/api/weather?scenario=normal)",
+      "Bash(curl -s http://localhost:5173/api/weather?scenario=heavy-pollution)",
+      "Bash(curl -s http://localhost:5173/api/weather?scenario=error)",
+      "Bash(pnpm check:*)",
+      "Bash(pnpm build:*)",
+      "Bash(ls:*)",
+      "Bash(sudo sed:*)",
+      "Bash(pnpm install:*)"
+    ]
+  }
+}

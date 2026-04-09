@@ -9,16 +9,21 @@
     isLoading,
     dataMode,
     mockScenario,
+    locationSource,
+    mockLat,
+    mockLon,
     loadWeatherData,
+    refreshWithGps,
     switchScenario,
-    switchToReal
+    switchToReal,
+    setMockCoords,
+    clearMockCoords
   } from '$lib/stores/weather';
   import type { MockScenario } from '$lib/stores/weather';
 
   import Header from '$lib/components/Header.svelte';
   import HeroSection from '$lib/components/HeroSection.svelte';
   import StatsRow from '$lib/components/StatsRow.svelte';
-  import HourlyForecast from '$lib/components/HourlyForecast.svelte';
   import DailyForecast from '$lib/components/DailyForecast.svelte';
   import AqiSection from '$lib/components/AqiSection.svelte';
   import HumidityChart from '$lib/components/HumidityChart.svelte';
@@ -36,10 +41,10 @@
   Chart.register(...registerables);
   Chart.defaults.font = {
     ...Chart.defaults.font,
-    family: "'Space Mono', monospace",
-    size: 10
+    family: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif",
+    size: 11
   } as typeof Chart.defaults.font;
-  Chart.defaults.color = '#88887a';
+  Chart.defaults.color = 'rgba(0, 0, 0, 0.35)';
 
   const scenarios: { value: MockScenario; label: string }[] = [
     { value: 'normal', label: '正常' },
@@ -50,6 +55,34 @@
   ];
 
   let mockPanelOpen = $state(false);
+  let inputLat = $state('');
+  let inputLon = $state('');
+  let dateClickCount = $state(0);
+  let dateClickTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function handleDateTripleClick() {
+    dateClickCount += 1;
+    if (dateClickTimer) clearTimeout(dateClickTimer);
+    dateClickTimer = setTimeout(() => { dateClickCount = 0; }, 600);
+    if (dateClickCount >= 3) {
+      dateClickCount = 0;
+      mockPanelOpen = !mockPanelOpen;
+    }
+  }
+
+  function handleSetCoords() {
+    const lat = parseFloat(inputLat);
+    const lon = parseFloat(inputLon);
+    if (isNaN(lat) || isNaN(lon)) return;
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return;
+    setMockCoords(lat, lon);
+  }
+
+  function handleClearCoords() {
+    inputLat = '';
+    inputLon = '';
+    clearMockCoords();
+  }
 
   onMount(() => {
     void loadWeatherData();
@@ -73,19 +106,19 @@
     const sections = document.querySelectorAll('.w-container > *');
     controls.push(motionAnimateTyped(
       sections,
-      { opacity: [0, 1], y: [16, 0] },
-      { duration: 0.5, delay: motionStaggerTyped(0.05), easing: 'ease-out' }
+      { opacity: [0, 1], y: [12, 0] },
+      { duration: 0.45, delay: motionStaggerTyped(0.04), easing: [0.25, 0.46, 0.45, 0.94] }
     ));
 
     controls.push(motionAnimateTyped(
       '.update-badge',
-      { opacity: [1, 0.4, 1] },
+      { opacity: [1, 0.5, 1] },
       { duration: 2.5, repeat: Infinity, easing: 'ease-in-out' }
     ));
 
     controls.push(motionAnimateTyped(
       '.sun-dot',
-      { y: [-2, 2, -2] },
+      { y: [-1, 1, -1] },
       { duration: 3, repeat: Infinity, easing: 'ease-in-out' }
     ));
 
@@ -93,8 +126,8 @@
     if (bars.length) {
       controls.push(motionAnimateTyped(
         bars,
-        { opacity: [0, 1], x: [-10, 0] },
-        { duration: 0.5, delay: motionStaggerTyped(0.06, { start: 0.3 }), easing: 'ease-out' }
+        { opacity: [0, 1], x: [-8, 0] },
+        { duration: 0.4, delay: motionStaggerTyped(0.05, { start: 0.2 }), easing: [0.25, 0.46, 0.45, 0.94] }
       ));
     }
 
@@ -125,29 +158,73 @@
   <title>天气 — {$weatherData?.location.city ?? '加载中'}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    }
+  </style>
 </svelte:head>
 
 <!-- Mock 场景切换器 (默认隐藏) -->
 {#if mockPanelOpen}
-  <div class="mock-switcher">
-    <span class="mock-label">Mock</span>
-    {#each scenarios as s}
-      <button
-        class="mock-btn"
-        class:active={$dataMode === 'mock' && $mockScenario === s.value}
-        onclick={() => switchScenario(s.value)}
-      >{s.label}</button>
-    {/each}
-    <button
-      class="mock-btn"
-      class:active={$dataMode === 'real'}
-      onclick={() => switchToReal()}
-    >实时</button>
-    <button class="mock-btn" onclick={() => (mockPanelOpen = false)}>✕</button>
+  <div class="mock-panel">
+    <div class="mock-panel-header">
+      <span class="mock-label">Mock</span>
+      <button class="mock-close" onclick={() => (mockPanelOpen = false)}>✕</button>
+    </div>
+
+    <!-- 场景选择 -->
+    <div class="mock-section">
+      <span class="mock-section-title">场景</span>
+      <div class="mock-scenario-row">
+        {#each scenarios as s}
+          <button
+            class="mock-btn"
+            class:active={$dataMode === 'mock' && $mockScenario === s.value && $mockLat === null}
+            onclick={() => switchScenario(s.value)}
+          >{s.label}</button>
+        {/each}
+        <button
+          class="mock-btn"
+          class:active={$dataMode === 'real'}
+          onclick={() => switchToReal()}
+        >实时</button>
+      </div>
+    </div>
+
+    <!-- 自定义经纬度 -->
+    <div class="mock-section">
+      <span class="mock-section-title">自定义位置</span>
+      <div class="mock-coord-row">
+        <input
+          class="mock-input"
+          type="number"
+          step="0.0001"
+          placeholder="纬度 34.26"
+          bind:value={inputLat}
+        />
+        <input
+          class="mock-input"
+          type="number"
+          step="0.0001"
+          placeholder="经度 108.94"
+          bind:value={inputLon}
+        />
+      </div>
+      <div class="mock-coord-actions">
+        <button class="mock-btn mock-btn-primary" onclick={handleSetCoords}>应用</button>
+        {#if $mockLat !== null}
+          <button class="mock-btn" onclick={handleClearCoords}>清除</button>
+        {/if}
+      </div>
+      {#if $mockLat !== null}
+        <span class="mock-coord-status">已设置: {$mockLat.toFixed(4)} {$mockLon?.toFixed(4)}</span>
+      {/if}
+    </div>
   </div>
 {/if}
-<button class="mock-trigger" onclick={() => (mockPanelOpen = !mockPanelOpen)} title="Mock 数据切换">⚙</button>
 
 {#if $isLoading}
   <div class="w-container">
@@ -164,13 +241,12 @@
 {:else if $weatherData}
   {@const data = $weatherData}
   <div class="w-container">
-    <Header location={data.location} />
+    <Header location={data.location} locationSource={$locationSource} onGpsLocate={() => refreshWithGps()} onDateTripleClick={handleDateTripleClick} />
     <HeroSection current={data.current} />
     <StatsRow current={data.current} />
-    <HourlyForecast hourly={data.hourly} />
-    <DailyForecast daily={data.daily} />
-    <AqiSection current={data.current} pollutants={data.aqiPollutants} hourlyAqi={data.hourlyAqi} hourly={data.hourly} />
     <HumidityChart hourly={data.hourly} hourlyHumidity={data.hourlyHumidity} />
+    <DailyForecast daily={data.daily} />
+    <AqiSection current={data.current} pollutants={data.aqiPollutants} />
     <SunSection sun={data.sun} />
     <DetailsSection current={data.current} />
     <Footer />
