@@ -1,5 +1,5 @@
 import { writable, derived, type Readable } from 'svelte/store';
-import { fetchWeatherData, fetchWeatherByLocation, WeatherApiError } from '$lib/api/weather';
+import { fetchWeatherData, fetchWeatherByLocation, fetchLocationInfo, WeatherApiError } from '$lib/api/weather';
 import { requestGeolocation } from '$lib/geolocation';
 import type { WeatherData } from '$lib/types/weather';
 import { mockDataMap } from '$lib/mock/weather';
@@ -62,6 +62,27 @@ const errorStore = writable<string | null>(null);
 let activeRequestId = 0;
 let realWeatherController: AbortController | null = null;
 
+/**
+ * 补全天气数据中缺失的城市名
+ * by-location API 只返回经纬度，通过 comprehensive 接口获取 IP 定位的城市名作为兜底
+ */
+async function fillLocationCity(
+  data: WeatherData,
+  signal?: AbortSignal
+): Promise<WeatherData> {
+  // 如果已经有城市名就不需要补
+  if (data.location.city && data.location.city !== '未知位置') return data;
+
+  const loc = await fetchLocationInfo(signal);
+  if (!loc) return data;
+
+  const city = loc.district ? `${loc.city} ${loc.district}` : loc.city;
+  return {
+    ...data,
+    location: { ...data.location, city }
+  };
+}
+
 function beginLoad() {
   activeRequestId += 1;
   stateStore.set('loading');
@@ -91,7 +112,11 @@ export async function loadRealWeather() {
       const data = await fetchWeatherByLocation(pos.lat, pos.lon, signal);
       if (!isCurrentRequest(requestId, 'real')) return;
 
-      dataStore.set(data);
+      // 补全城市名（by-location API 可能只返回经纬度）
+      const filled = await fillLocationCity(data, signal);
+      if (!isCurrentRequest(requestId, 'real')) return;
+
+      dataStore.set(filled);
       locationSource.set('gps');
       stateStore.set('success');
       usedGps = true;
@@ -148,7 +173,10 @@ export async function refreshWithGps() {
     const data = await fetchWeatherByLocation(pos.lat, pos.lon, signal);
     if (!isCurrentRequest(requestId, 'real')) return;
 
-    dataStore.set(data);
+    const filled = await fillLocationCity(data, signal);
+    if (!isCurrentRequest(requestId, 'real')) return;
+
+    dataStore.set(filled);
     locationSource.set('gps');
     stateStore.set('success');
   } catch (e) {

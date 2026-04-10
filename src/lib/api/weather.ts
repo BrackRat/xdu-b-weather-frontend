@@ -54,6 +54,29 @@ export async function fetchWeatherData(signal?: AbortSignal): Promise<WeatherDat
   return mapBackendToWeatherData(raw);
 }
 
+/**
+ * 获取 IP 定位的位置信息（仅用于补全城市名，不获取天气）
+ */
+export async function fetchLocationInfo(signal?: AbortSignal): Promise<{ city: string; district: string } | null> {
+  if (!BACKEND_BASE) return null;
+
+  try {
+    const url = `${BACKEND_BASE}/weather/comprehensive`;
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal
+    });
+    if (!response.ok) return null;
+
+    const raw = await response.json();
+    const loc = raw.location;
+    if (!loc?.city) return null;
+    return { city: loc.city, district: loc.district ?? '' };
+  } catch {
+    return null;
+  }
+}
+
 /** 天气 API 错误类 */
 export class WeatherApiError extends Error {
   statusCode: number;

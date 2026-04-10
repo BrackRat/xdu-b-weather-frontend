@@ -619,14 +619,16 @@ export function mapBackendToWeatherData(raw: BackendWeatherResponse): WeatherDat
     Math.round(item.value * 100)
   );
 
-  const lat = parseFloat(raw.location.latitude);
-  const lon = parseFloat(raw.location.longitude);
+  const lat = parseFloat(raw.location.latitude ?? '0');
+  const lon = parseFloat(raw.location.longitude ?? '0');
+  const city = raw.location.city ?? '';
+  const district = raw.location.district ?? '';
 
   return {
     location: {
-      city: raw.location.city + (raw.location.district ? ` ${raw.location.district}` : ''),
-      lat: formatCoord(lat, 'N', 'S'),
-      lon: formatCoord(lon, 'E', 'W'),
+      city: district ? `${city} ${district}` : city || '未知位置',
+      lat: isNaN(lat) ? '--' : formatCoord(lat, 'N', 'S'),
+      lon: isNaN(lon) ? '--' : formatCoord(lon, 'E', 'W'),
     },
     current,
     sun,

@@ -8,7 +8,7 @@
     onGpsLocate,
     onDateTripleClick
   }: {
-    location: Location;
+    location?: Location;
     locationSource: 'gps' | 'ip' | null;
     onGpsLocate?: (lat: number, lon: number) => void;
     onDateTripleClick?: () => void;
@@ -38,7 +38,7 @@
       } else if (typeof e === 'object' && e !== null && 'code' in e) {
         const code = (e as { code: number }).code;
         if (code === 1) msg = '定位权限被拒绝';
-        else if (code === 2) '无法获取位置';
+        else if (code === 2) msg = '无法获取位置';
         else if (code === 3) msg = '定位超时';
       }
       if (window.isSecureContext === false) {
@@ -58,13 +58,13 @@
     <span class="date-label">{dateLabel}</span>
   </div>
   <div class="location-tag">
-    <span class="location-city">{location.city}</span>
+    <span class="location-city">{location?.city ?? '定位中...'}</span>
     {#if gpsPos}
       <span class="location-coords">
         {formatGcjCoord(gpsPos.lat)} {formatGcjCoord(gpsPos.lon)}
         <span class="gps-badge">GCJ-02</span>
       </span>
-    {:else}
+    {:else if location}
       <span class="location-coords">{location.lat} {location.lon}</span>
     {/if}
     <div class="locate-row">
