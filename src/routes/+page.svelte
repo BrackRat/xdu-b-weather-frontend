@@ -21,6 +21,29 @@
   } from '$lib/stores/weather';
   import type { MockScenario } from '$lib/stores/weather';
 
+  function isDarkMode(): boolean {
+    const html = document.documentElement;
+    const theme = html.getAttribute('data-theme');
+    if (theme === 'dark') return true;
+    if (theme === 'light') return false;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  function updateChartTheme() {
+    const dark = isDarkMode();
+    Chart.defaults.color = dark ? 'rgba(255,255,255,0.4)' : 'rgba(0, 0, 0, 0.35)';
+  }
+
+  const darkMql = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  if (darkMql) {
+    darkMql.addEventListener('change', () => {
+      const html = document.documentElement;
+      if (html.getAttribute('data-theme') === 'auto') {
+        updateChartTheme();
+      }
+    });
+  }
+
   import Header from '$lib/components/Header.svelte';
   import HeroSection from '$lib/components/HeroSection.svelte';
   import StatsRow from '$lib/components/StatsRow.svelte';
@@ -44,7 +67,9 @@
     family: "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif",
     size: 11
   } as typeof Chart.defaults.font;
-  Chart.defaults.color = 'rgba(0, 0, 0, 0.35)';
+  if (typeof window !== 'undefined') {
+    Chart.defaults.color = isDarkMode() ? 'rgba(255,255,255,0.4)' : 'rgba(0, 0, 0, 0.35)';
+  }
 
   const scenarios: { value: MockScenario; label: string }[] = [
     { value: 'normal', label: '正常' },

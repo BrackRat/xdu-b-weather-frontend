@@ -10,9 +10,11 @@
   const safeHourly = $derived(hourly.length > 0 ? hourly : []);
 
   onMount(() => {
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const monoFont = { family: "'SF Mono', 'Space Mono', ui-monospace, monospace", size: 11 };
-    const gridColor = 'rgba(0, 0, 0, 0.04)';
-    const tooltipBg = '#1d1d1f';
+    const gridColor = dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)';
+    const tooltipBg = dark ? '#f5f5f7' : '#1d1d1f';
+    const tickColor = dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)';
 
     const ctx = tempChartEl.getContext('2d')!;
     const tempGrad = ctx.createLinearGradient(0, 0, 0, 200);
@@ -55,8 +57,8 @@
           }
         },
         scales: {
-          x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: 'rgba(0,0,0,0.35)' } },
-          y: { grid: { color: gridColor }, ticks: { font: { size: 10 }, color: 'rgba(0,0,0,0.35)' } }
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: tickColor } },
+          y: { grid: { color: gridColor }, ticks: { font: { size: 10 }, color: tickColor } }
         }
       }
     });

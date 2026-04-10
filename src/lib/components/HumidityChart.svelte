@@ -17,9 +17,27 @@
   const safeHourly = $derived(hourly.length > 0 ? hourly : []);
   const safeHumidity = $derived(hourlyHumidity.length > 0 ? hourlyHumidity : []);
 
+  function getDark() {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
   const monoFont = { family: "'SF Mono', 'Space Mono', ui-monospace, monospace", size: 11 };
-  const gridColor = 'rgba(0, 0, 0, 0.04)';
-  const tooltipBg = '#1d1d1f';
+
+  function getGridColor() {
+    return getDark() ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)';
+  }
+
+  function getTooltipBg() {
+    return getDark() ? '#f5f5f7' : '#1d1d1f';
+  }
+
+  function getTickColor() {
+    return getDark() ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)';
+  }
+
+  function getLegendColor() {
+    return getDark() ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)';
+  }
 
   function getChartData(ctx: CanvasRenderingContext2D): ChartData<'line', number[], string> {
     const humiGrad = ctx.createLinearGradient(0, 0, 0, 200);
@@ -68,10 +86,10 @@
         display: true,
         position: 'top',
         align: 'end',
-        labels: { boxWidth: 12, boxHeight: 2, font: { size: 10 }, padding: 12, usePointStyle: false, color: 'rgba(0,0,0,0.45)' }
+        labels: { boxWidth: 12, boxHeight: 2, font: { size: 10 }, padding: 12, usePointStyle: false, color: getLegendColor() }
       },
       tooltip: {
-        backgroundColor: tooltipBg,
+        backgroundColor: getTooltipBg(),
         titleFont: monoFont,
         bodyFont: monoFont,
         padding: 10,
@@ -79,19 +97,19 @@
       }
     },
     scales: {
-      x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: 'rgba(0,0,0,0.35)' } },
+      x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: getTickColor() } },
       y: {
         type: 'linear',
         position: 'left',
-        grid: { color: gridColor },
-        ticks: { font: { size: 10 }, color: 'rgba(0,0,0,0.35)', callback: (v) => `${v}°` },
+        grid: { color: getGridColor() },
+        ticks: { font: { size: 10 }, color: getTickColor(), callback: (v) => `${v}°` },
         title: { display: true, text: '温度', font: { size: 10 }, color: '#ff9f0a' }
       },
       y1: {
         type: 'linear',
         position: 'right',
         grid: { drawOnChartArea: false },
-        ticks: { font: { size: 10 }, color: 'rgba(0,0,0,0.35)', callback: (v) => `${v}%` },
+        ticks: { font: { size: 10 }, color: getTickColor(), callback: (v) => `${v}%` },
         title: { display: true, text: '湿度', font: { size: 10 }, color: 'rgba(0,113,227,0.5)' },
         suggestedMin: 30,
         suggestedMax: 80
