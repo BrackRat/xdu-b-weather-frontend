@@ -12,8 +12,9 @@ declare global {
 
 /// <reference types="vite/client" />
 interface ImportMetaEnv {
-	readonly CAIYUN_KEY: string;
-	readonly WEATHER_API_BASE_URL: string;
+	readonly PUBLIC_WEATHER_API_BASE_URL: string;
+	readonly PUBLIC_BEIAN_ENABLED?: string;
+	readonly PUBLIC_BEIAN_TEXT?: string;
 }
 interface ImportMeta {
 	readonly env: ImportMetaEnv;

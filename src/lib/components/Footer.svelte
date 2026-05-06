@@ -1,4 +1,9 @@
 <script lang="ts">
+  import { env } from '$env/dynamic/public';
+
+  const beianEnabled = env.PUBLIC_BEIAN_ENABLED === 'true';
+  const beianText = env.PUBLIC_BEIAN_TEXT?.trim();
+
   const now = new Date();
   const lastUpdate = $derived(
     `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} CST`
@@ -16,7 +21,9 @@
       <span>weather.sys/v2.4</span>
     </div>
   </div>
-  <div class="footer-bottom">
-    <a href="https://beian.miit.gov.cn/#/" target="_blank" rel="noopener noreferrer">陕ICP备2024027651号-2</a>
-  </div>
+  {#if beianEnabled && beianText}
+    <div class="footer-bottom">
+      <a href="https://beian.miit.gov.cn/#/" target="_blank" rel="noopener noreferrer">{beianText}</a>
+    </div>
+  {/if}
 </footer>
