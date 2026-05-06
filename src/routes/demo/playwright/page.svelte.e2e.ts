@@ -87,6 +87,7 @@ test('renders the weather dashboard from the backend response', async ({ page })
 						coldRisk: []
 					}
 				},
+				forecast_keypoint: '小雨，今天傍晚18点钟后雨停，转阴',
 				record_id: 1
 			})
 		});
@@ -95,6 +96,23 @@ test('renders the weather dashboard from the backend response', async ({ page })
 	await page.goto('/');
 	await expect(page.getByText('西安 雁塔区')).toBeVisible();
 	await expect(page.locator('.condition-main').getByText('轻度雾霾')).toBeVisible();
+	await expect(page.getByText('小雨，今天傍晚18点钟后雨停，转阴')).toBeVisible();
 	await expect(page.getByText('空气质量')).toBeVisible();
 	await expect(page.getByRole('button', { name: '重试' })).toHaveCount(0);
+});
+
+test('renders selected local mock scenario without calling live weather', async ({ page }) => {
+	await page.addInitScript(() => {
+		localStorage.setItem('weather_dataMode', JSON.stringify('mock'));
+		localStorage.setItem('weather_mockScenario', JSON.stringify('heavy-pollution'));
+		localStorage.setItem('weather_mockLat', JSON.stringify(null));
+		localStorage.setItem('weather_mockLon', JSON.stringify(null));
+	});
+
+	await page.goto('/');
+
+	await expect(page.getByText('西安 高新区')).toBeVisible();
+	await expect(page.locator('.gauge-val').getByText('286')).toBeVisible();
+	await expect(page.locator('.section-subtitle').getByText('重度污染')).toBeVisible();
+	await expect(page.getByText('静稳高湿，污染物扩散条件差，夜间至明早仍维持重污染。')).toBeVisible();
 });

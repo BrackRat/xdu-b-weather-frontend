@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { CurrentWeather } from '$lib/types/weather';
 
-  let { current }: { current: CurrentWeather } = $props();
+  let { current, forecastKeypoint }: { current: CurrentWeather; forecastKeypoint?: string } = $props();
 
   const weatherIcons: Record<string, string> = {
     '晴': 'sun',
@@ -41,6 +41,9 @@
       <span class="condition-main">{#each current.condition as line}{line}<br/>{/each}</span>
     </div>
   </div>
+  {#if forecastKeypoint}
+    <p class="forecast-keypoint" aria-label="天气提示">{forecastKeypoint}</p>
+  {/if}
   {#if iconType === 'sun'}
     <svg class="weather-icon-large" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
       <circle cx="50" cy="50" r="22"/>

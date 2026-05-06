@@ -14,6 +14,7 @@
     mockLon,
     loadWeatherData,
     refreshWithGps,
+    refreshWithIp,
     switchScenario,
     switchToReal,
     setMockCoords,
@@ -82,17 +83,9 @@
   let mockPanelOpen = $state(false);
   let inputLat = $state('');
   let inputLon = $state('');
-  let dateClickCount = $state(0);
-  let dateClickTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function handleDateTripleClick() {
-    dateClickCount += 1;
-    if (dateClickTimer) clearTimeout(dateClickTimer);
-    dateClickTimer = setTimeout(() => { dateClickCount = 0; }, 600);
-    if (dateClickCount >= 3) {
-      dateClickCount = 0;
-      mockPanelOpen = !mockPanelOpen;
-    }
+  function toggleMockPanel() {
+    mockPanelOpen = !mockPanelOpen;
   }
 
   function handleSetCoords() {
@@ -142,8 +135,8 @@
     ));
 
     controls.push(motionAnimateTyped(
-      '.sun-dot',
-      { y: [-1, 1, -1] },
+      '.sun-node',
+      { r: [8, 9.5, 8] },
       { duration: 3, repeat: Infinity, easing: 'ease-in-out' }
     ));
 
@@ -207,7 +200,7 @@
         {#each scenarios as s}
           <button
             class="mock-btn"
-            class:active={$dataMode === 'mock' && $mockScenario === s.value && $mockLat === null}
+            class:active={$dataMode === 'mock' && $mockScenario === s.value}
             onclick={() => switchScenario(s.value)}
           >{s.label}</button>
         {/each}
@@ -266,8 +259,8 @@
 {:else if $weatherData}
   {@const data = $weatherData}
   <div class="w-container">
-    <Header location={data.location} locationSource={$locationSource} onGpsLocate={() => refreshWithGps()} onDateTripleClick={handleDateTripleClick} />
-    <HeroSection current={data.current} />
+    <Header location={data.location} locationSource={$locationSource} mockActive={$dataMode === 'mock'} onGpsLocate={() => refreshWithGps()} onIpLocate={() => refreshWithIp()} onMockToggle={toggleMockPanel} />
+    <HeroSection current={data.current} forecastKeypoint={data.forecastKeypoint} />
     <StatsRow current={data.current} />
     <HumidityChart hourly={data.hourly} hourlyHumidity={data.hourlyHumidity} />
     <DailyForecast daily={data.daily} />

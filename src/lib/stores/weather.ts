@@ -16,6 +16,9 @@ export type DataMode = 'real' | 'mock';
 /** 定位来源 */
 export type LocationSource = 'gps' | 'ip' | null;
 
+/** 定位模式偏好 */
+type LocationMode = 'gps' | 'ip';
+
 // ===== localStorage 工具 =====
 function loadFromStorage<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -44,6 +47,9 @@ mockScenario.subscribe((v) => saveToStorage('weather_mockScenario', v));
 
 /** 定位来源 */
 export const locationSource = writable<LocationSource>(null);
+
+const locationMode = writable<LocationMode>(loadFromStorage('weather_locationMode', 'gps'));
+locationMode.subscribe((v) => saveToStorage('weather_locationMode', v));
 
 /** 自定义经纬度（mock 模式下使用，null 表示未设置） */
 export const mockLat = writable<number | null>(loadFromStorage('weather_mockLat', null));
@@ -100,8 +106,19 @@ export async function loadRealWeather() {
   realWeatherController?.abort();
   realWeatherController = new AbortController();
   const signal = realWeatherController.signal;
+  const mode = getStoreValue(locationMode);
 
   try {
+    if (mode === 'ip') {
+      const data = await fetchWeatherData(signal);
+      if (!isCurrentRequest(requestId, 'real')) return;
+
+      dataStore.set(data);
+      locationSource.set('ip');
+      stateStore.set('success');
+      return;
+    }
+
     // 第一步：尝试浏览器 GPS 定位
     let usedGps = false;
     try {
@@ -161,6 +178,8 @@ export async function loadRealWeather() {
 
 /** 手动使用 GPS 定位刷新天气 */
 export async function refreshWithGps() {
+  dataMode.set('real');
+  locationMode.set('gps');
   const requestId = beginLoad();
   realWeatherController?.abort();
   realWeatherController = new AbortController();
@@ -195,6 +214,43 @@ export async function refreshWithGps() {
       errorStore.set('GPS 定位失败，IP 定位也失败');
       stateStore.set('error');
     }
+  } finally {
+    if (requestId === activeRequestId) {
+      realWeatherController = null;
+    }
+  }
+}
+
+/** 手动使用 IP 模糊定位刷新天气 */
+export async function refreshWithIp() {
+  dataMode.set('real');
+  locationMode.set('ip');
+  const requestId = beginLoad();
+  realWeatherController?.abort();
+  realWeatherController = new AbortController();
+  const signal = realWeatherController.signal;
+
+  try {
+    const data = await fetchWeatherData(signal);
+    if (!isCurrentRequest(requestId, 'real')) return;
+
+    dataStore.set(data);
+    locationSource.set('ip');
+    stateStore.set('success');
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return;
+    if (!isCurrentRequest(requestId, 'real')) return;
+
+    let msg: string;
+    if (e instanceof WeatherApiError) {
+      msg = `API 错误 (${e.statusCode}): ${e.message}`;
+    } else if (e instanceof Error) {
+      msg = e.message;
+    } else {
+      msg = '未知错误';
+    }
+    errorStore.set(msg);
+    stateStore.set('error');
   } finally {
     if (requestId === activeRequestId) {
       realWeatherController = null;
@@ -267,6 +323,8 @@ export async function loadWeatherData() {
 /** 切换 mock 场景并重新加载 */
 export function switchScenario(scenario: MockScenario) {
   mockScenario.set(scenario);
+  mockLat.set(null);
+  mockLon.set(null);
   dataMode.set('mock');
   void loadMockWeather(scenario);
 }

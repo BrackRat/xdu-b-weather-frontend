@@ -119,6 +119,7 @@ export interface PollutantData {
 export interface WeatherData {
   location: Location;
   current: CurrentWeather;
+  forecastKeypoint?: string;
   sun: SunData;
   hourly: HourlyForecast[];
   daily: DailyForecast[];
@@ -417,8 +418,8 @@ export function mapCaiyunToWeatherData(
     { name: 'PM2.5', value: rt.air_quality.pm25, max: 150, unit: 'µg/m³' },
     { name: 'PM10', value: rt.air_quality.pm10, max: 250, unit: 'µg/m³' },
     { name: 'O₃', value: rt.air_quality.o3, max: 180, unit: 'µg/m³' },
-    { name: 'NO₂', value: rt.air_quality.no2, max: 100, unit: 'ppb' },
-    { name: 'SO₂', value: rt.air_quality.so2, max: 80, unit: 'ppb' },
+    { name: 'NO₂', value: rt.air_quality.no2, max: 200, unit: 'µg/m³' },
+    { name: 'SO₂', value: rt.air_quality.so2, max: 500, unit: 'µg/m³' },
     { name: 'CO', value: rt.air_quality.co, max: 5, unit: 'mg/m³' },
   ];
 
@@ -522,6 +523,7 @@ export interface BackendWeatherResponse {
       aqi: { date: string; max: { chn: number; usa: number }; avg: { chn: number; usa: number }; min: { chn: number; usa: number } }[];
     };
   };
+  forecast_keypoint?: string;
   record_id: number;
 }
 
@@ -606,8 +608,8 @@ export function mapBackendToWeatherData(raw: BackendWeatherResponse): WeatherDat
     { name: 'PM2.5', value: aq.pm25, max: 150, unit: 'µg/m³' },
     { name: 'PM10', value: aq.pm10, max: 250, unit: 'µg/m³' },
     { name: 'O₃', value: aq.o3, max: 180, unit: 'µg/m³' },
-    { name: 'NO₂', value: aq.no2, max: 100, unit: 'ppb' },
-    { name: 'SO₂', value: aq.so2, max: 80, unit: 'ppb' },
+    { name: 'NO₂', value: aq.no2, max: 200, unit: 'µg/m³' },
+    { name: 'SO₂', value: aq.so2, max: 500, unit: 'µg/m³' },
     { name: 'CO', value: aq.co, max: 5, unit: 'mg/m³' },
   ];
 
@@ -631,6 +633,7 @@ export function mapBackendToWeatherData(raw: BackendWeatherResponse): WeatherDat
       lon: isNaN(lon) ? '--' : formatCoord(lon, 'E', 'W'),
     },
     current,
+    forecastKeypoint: raw.forecast_keypoint?.trim() || undefined,
     sun,
     hourly: hourlyForecast,
     daily: dailyForecast,
