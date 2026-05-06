@@ -11,16 +11,10 @@
 </script>
 
 <footer class="footer">
-  <div class="footer-top">
-    <div class="footer-left">
+    <div class="self-center">
       <span class="update-badge">实时</span>
       <span class="footer-info">更新于 {lastUpdate}</span>
     </div>
-    <div class="footer-right">
-      <span class="page-num">06</span>
-      <span>weather.sys/v2.4</span>
-    </div>
-  </div>
   {#if beianEnabled && beianText}
     <div class="footer-bottom">
       <a href="https://beian.miit.gov.cn/#/" target="_blank" rel="noopener noreferrer">{beianText}</a>
