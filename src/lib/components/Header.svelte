@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { Location } from '$lib/types/weather';
 
   let {
@@ -23,6 +24,7 @@
   const dateLabel = $derived(`${months[now.getMonth()]} ${now.getFullYear()}`);
 
   let modeMenuOpen = $state(false);
+  let locationModeEl: HTMLDivElement | undefined;
 
   const locationModeLabel = $derived(
     locationSource === 'gps' ? 'GPS 精确定位' : locationSource === 'ip' ? 'IP 模糊定位' : '定位模式'
@@ -38,6 +40,27 @@
       onIpLocate?.();
     }
   }
+
+  onMount(() => {
+    function handleDocumentPointerDown(event: PointerEvent) {
+      if (!modeMenuOpen || locationModeEl?.contains(event.target as Node)) return;
+      modeMenuOpen = false;
+    }
+
+    function handleDocumentKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        modeMenuOpen = false;
+      }
+    }
+
+    document.addEventListener('pointerdown', handleDocumentPointerDown);
+    document.addEventListener('keydown', handleDocumentKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleDocumentPointerDown);
+      document.removeEventListener('keydown', handleDocumentKeyDown);
+    };
+  });
 </script>
 
 <header class="header">
@@ -66,7 +89,7 @@
     {#if location}
       <span class="location-coords">{location.lat} {location.lon}</span>
     {/if}
-    <div class="location-mode">
+    <div class="location-mode" bind:this={locationModeEl}>
       <button
         class="source-tag"
         class:gps={locationSource === 'gps'}
@@ -161,6 +184,7 @@
     letter-spacing: 0.02em;
     cursor: pointer;
     line-height: 1;
+    white-space: nowrap;
     transition: background 0.15s var(--ease-out), border-color 0.15s var(--ease-out), color 0.15s var(--ease-out);
   }
 
@@ -193,9 +217,10 @@
   .mode-menu {
     position: absolute;
     top: calc(100% + 6px);
-    left: 0;
+    right: 0;
     z-index: 20;
     width: 152px;
+    max-width: calc(100vw - 32px);
     padding: 4px;
     background: var(--bg-card);
     border: 1px solid rgba(0, 0, 0, 0.06);
