@@ -54,6 +54,7 @@
   import SunSection from '$lib/components/SunSection.svelte';
   import DetailsSection from '$lib/components/DetailsSection.svelte';
   import Footer from '$lib/components/Footer.svelte';
+  import Skeleton from '$lib/components/Skeleton.svelte';
 
   const motionAnimateTyped = motionAnimate as unknown as (
     target: string | Element | NodeListOf<Element>,
@@ -245,9 +246,7 @@
 {/if}
 
 {#if $isLoading}
-  <div class="w-container">
-    <div class="loading-state">加载中...</div>
-  </div>
+  <Skeleton />
 {:else if $weatherError}
   <div class="w-container">
     <div class="error-state">

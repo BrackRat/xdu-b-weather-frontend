@@ -60,6 +60,10 @@
   /* Transitions */
   --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Skeleton */
+  --skeleton-base: rgba(0, 0, 0, 0.06);
+  --skeleton-shine: rgba(255, 255, 255, 0.6);
 }
 
 /* ===== Base Reset & Typography ===== */
@@ -1129,6 +1133,9 @@ body {
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
     --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 1px rgba(255, 255, 255, 0.05);
+
+    --skeleton-base: rgba(255, 255, 255, 0.08);
+    --skeleton-shine: rgba(255, 255, 255, 0.05);
   }
 
   /* Borders / separators */
